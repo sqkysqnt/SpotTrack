@@ -4,3 +4,4 @@ paho-mqtt
 python-osc
 opencv-python-headless
 tflite-runtime
+pika
