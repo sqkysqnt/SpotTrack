@@ -1,0 +1,8 @@
+fastapi==0.85.1
+uvicorn==0.18.2
+opencv-python-headless==4.5.5.64
+numpy==1.21.4
+aiymakerkit==0.0.1  # Ensure this is the correct version for your project
+tflite-runtime==2.5.0.post1
+pycoral==2.0.0  # Ensure this version is compatible with your setup
+

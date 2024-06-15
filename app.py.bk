@@ -1,0 +1,79 @@
+from fastapi import FastAPI, BackgroundTasks
+from fastapi.responses import HTMLResponse
+import cv2
+import socket
+import struct
+import threading
+
+app = FastAPI()
+
+# Multicast settings
+MULTICAST_GROUP = '224.1.1.1'
+MULTICAST_PORT = 5004
+TTL = 1
+
+# Initialize camera with a lock for thread-safe access
+lock = threading.Lock()
+cap = cv2.VideoCapture(0)
+
+def initialize_camera():
+    global cap
+    if not cap.isOpened():
+        print("Reinitializing camera...")
+        cap.release()
+        cap = cv2.VideoCapture(0)
+        if not cap.isOpened():
+            print("Error: Could not open video device.")
+        else:
+            print("Video device opened successfully.")
+
+@app.on_event("shutdown")
+def shutdown_event():
+    print("Shutting down, releasing camera...")
+    cap.release()
+
+def send_frames():
+    global cap
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, struct.pack('b', TTL))
+    multicast_address = (MULTICAST_GROUP, MULTICAST_PORT)
+
+    frame_count = 0
+    while True:
+        with lock:
+            if not cap.isOpened():
+                initialize_camera()
+            success, frame = cap.read()
+            if not success:
+                print("Failed to capture frame")
+                continue
+            frame_count += 1
+            print(f"Captured frame {frame_count}")
+            ret, buffer = cv2.imencode('.jpg', frame)
+            if not ret:
+                print("Failed to encode frame")
+                continue
+            sock.sendto(buffer.tobytes(), multicast_address)
+
+@app.get("/", response_class=HTMLResponse)
+async def index():
+    return """
+    <html>
+        <head>
+            <title>Video Feed</title>
+        </head>
+        <body>
+            <h1>Video Feed</h1>
+            <p>Broadcasting on multicast address 224.1.1.1:5004</p>
+        </body>
+    </html>
+    """
+
+@app.on_event("startup")
+async def startup_event():
+    threading.Thread(target=send_frames, daemon=True).start()
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+
