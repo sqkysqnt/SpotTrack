@@ -1,77 +1,80 @@
-from fastapi import FastAPI, BackgroundTasks
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse, StreamingResponse
 import cv2
-import socket
-import struct
-import threading
+from aiymakerkit import vision, utils
+import models
+from pytube import YouTube
 
 app = FastAPI()
 
-# Multicast settings
-MULTICAST_GROUP = '224.1.1.1'
-MULTICAST_PORT = 5004
-TTL = 1
+# Object detection setup
+detector = vision.Detector(models.OBJECT_DETECTION_MODEL)
+labels = utils.read_labels_from_metadata(models.OBJECT_DETECTION_MODEL)
 
-# Initialize camera with a lock for thread-safe access
-lock = threading.Lock()
-cap = cv2.VideoCapture(0)
+# Set up the video stream
 
-def initialize_camera():
-    global cap
-    if not cap.isOpened():
-        print("Reinitializing camera...")
-        cap.release()
-        cap = cv2.VideoCapture(0)
-        if not cap.isOpened():
-            print("Error: Could not open video device.")
-        else:
-            print("Video device opened successfully.")
+#MST Beauty and the Beast
+video_url = "https://www.youtube.com/watch?v=sZzN7JSOQ5E"  # Example video URL
 
-@app.on_event("shutdown")
-def shutdown_event():
-    print("Shutting down, releasing camera...")
-    cap.release()
+#Highpoint Message
+#video_url = "https://www.youtube.com/watch?v=iGt1FBzCe70&t=10s"
 
-def send_frames():
-    global cap
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-    sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, struct.pack('b', TTL))
-    multicast_address = (MULTICAST_GROUP, MULTICAST_PORT)
 
-    frame_count = 0
+yt = YouTube(video_url)
+stream = yt.streams.filter(file_extension='mp4').first()
+cap = cv2.VideoCapture(stream.url)
+
+# Color toggle for bounding boxes
+box_color = (0, 165, 255)  # Orange
+
+def gen_frames():
+    global box_color
     while True:
-        with lock:
-            if not cap.isOpened():
-                initialize_camera()
-            success, frame = cap.read()
-            if not success:
-                print("Failed to capture frame")
-                continue
-            frame_count += 1
-            print(f"Captured frame {frame_count}")
+        success, frame = cap.read()
+        if not success:
+            break
+        else:
+            objects = detector.get_objects(frame, threshold=0.4)
+            vision.draw_objects(frame, objects, labels, color=box_color)
+
             ret, buffer = cv2.imencode('.jpg', frame)
-            if not ret:
-                print("Failed to encode frame")
-                continue
-            sock.sendto(buffer.tobytes(), multicast_address)
+            frame = buffer.tobytes()
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 
 @app.get("/", response_class=HTMLResponse)
 async def index():
     return """
     <html>
         <head>
-            <title>Video Feed</title>
+            <title>Object Detection</title>
         </head>
         <body>
-            <h1>Video Feed</h1>
-            <p>Broadcasting on multicast address 224.1.1.1:5004</p>
+            <h1>Object Detection Video Stream</h1>
+            <img src="/video_feed" width="100%">
+            <br><br>
+            <button onclick="toggleColor()">Toggle Box Color</button>
+            <script>
+                function toggleColor() {
+                    fetch('/toggle_color', { method: 'POST' });
+                }
+            </script>
         </body>
     </html>
     """
 
-@app.on_event("startup")
-async def startup_event():
-    threading.Thread(target=send_frames, daemon=True).start()
+@app.get("/video_feed")
+async def video_feed():
+    return StreamingResponse(gen_frames(), media_type="multipart/x-mixed-replace; boundary=frame")
+
+@app.post("/toggle_color")
+async def toggle_color():
+    global box_color
+    if box_color == (0, 165, 255):  # Orange
+        box_color = (0, 255, 0)  # Green
+    else:
+        box_color = (0, 165, 255)  # Orange
+    return {"message": "Color toggled"}
 
 if __name__ == "__main__":
     import uvicorn
