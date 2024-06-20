@@ -3,3 +3,5 @@ uvicorn
 paho-mqtt
 python-osc
 opencv-python
+pika
+numpy
