@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Stage Tracking System</title>
+    <link rel="stylesheet" type="text/css" href="/static/css/style.css">
+</head>
+<body>
+    <header id="main-header">
+        <div class="container">
+            <h1>Stage Tracking System Setup</h1>
+            <nav>
+                <ul>
+                    <li><a href="#" onclick="showTab('devices')">Devices</a></li>
+                    <li><a href="#" onclick="showTab('config')">Configuration</a></li>
+                    <li><a href="#" onclick="showTab('logs')">Logs</a></li>
+                    <li><a href="#" onclick="showTab('mqtt-info')">MQTT Info</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+    <div class="container">
+        <div id="devices" class="tab-content">
+            <h2>Connected Devices</h2>
+            <ul id="devices-list"></ul>
+        </div>
+        <div id="config" class="tab-content">
+            <h2>Send Configuration</h2>
+            <form id="configForm">
+                <label for="device_id">Device ID:</label>
+                <input type="text" id="device_id" name="device_id">
+
+                <label for="target_ssid">Target SSID:</label>
+                <select id="target_ssid" name="target_ssid"></select>
+                <button type="button" onclick="searchSSIDs()">Search SSIDs</button><br>
+
+                <label for="target_password">Target Password:</label>
+                <input type="text" id="target_password" name="target_password">
+
+                <label for="mode">Mode:</label>
+                <select id="mode" name="mode">
+                    <option value="setup">Setup</option>
+                    <option value="calibration">Calibration</option>
+                    <option value="show">Show</option>
+                </select>
+
+                <label for="calibration_data">Calibration Data:</label>
+                <input type="text" id="calibration_data" name="calibration_data">
+
+                <input type="submit" value="Send Configuration">
+            </form>
+            <button type="button" onclick="openSetupModal()">Trigger Setup Mode</button>
+        </div>
+        <div id="logs" class="tab-content">
+            <h2>Logs</h2>
+            <div id="logs-content"></div>
+        </div>
+        <div id="mqtt-info" class="tab-content">
+            <h2>MQTT Information</h2>
+            <div id="mqtt-info-content"></div>
+            <h2>Subscriptions</h2>
+            <ul id="subscriptions-list"></ul>
+        </div>
+    </div>
+
+    <div id="setupModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeSetupModal()">&times;</span>
+            <h2>Warning: Setup Mode</h2>
+            <p>All devices will disconnect during setup mode. Please select devices to revert to hardcoded settings:</p>
+            <form id="setupForm">
+                <div id="deviceCheckboxes"></div>
+                <button type="button" onclick="triggerSetupMode()">Confirm and Trigger Setup Mode</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/js/script.js"></script>
+    <script>
+        async function fetchSubscriptions() {
+            const response = await fetch('/subscriptions');
+            const data = await response.json();
+            const subscriptionsList = document.getElementById('subscriptions-list');
+            subscriptionsList.innerHTML = '';
+            data.subscriptions.forEach(subscription => {
+                const li = document.createElement('li');
+                li.textContent = subscription;
+                subscriptionsList.appendChild(li);
+            });
+        }
+
+        // Call fetchSubscriptions on page load
+        document.addEventListener('DOMContentLoaded', fetchSubscriptions);
+    </script>
+</body>
+</html>

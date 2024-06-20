@@ -1,0 +1,5 @@
+fastapi
+uvicorn
+paho-mqtt
+python-osc
+opencv-python
