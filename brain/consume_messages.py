@@ -3,6 +3,9 @@ import json
 import logging
 import numpy as np
 import trilateration  # Assuming trilateration.py is in the same directory or installed as a module
+from fastapi import FastAPI
+import uvicorn
+from utils.logging_utils import insert_anchor_point  # Import the function
 
 # Initialize dictionaries to hold distances and anchor positions
 distances = {}
@@ -13,6 +16,8 @@ mode = "error"  # Default mode to error if not set properly
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
 
+app = FastAPI()
+
 def set_mode(new_mode):
     global mode
     if new_mode in ["setup", "calibration", "show"]:
@@ -20,6 +25,11 @@ def set_mode(new_mode):
     else:
         mode = "error"
     logging.info(f"Mode set to: {mode}")
+
+@app.post("/set_mode")
+def set_mode_endpoint(new_mode: str):
+    set_mode(new_mode)
+    return {"status": "success", "mode": mode}
 
 def process_anchor_beacon_distance(message, channel):
     global calibration_distances, anchor_positions, distances
@@ -95,6 +105,11 @@ def process_system_setup(message):
         logging.info(f"Processing system setup: {message}")
         # Handle setup logic here
 
+def process_anchor_exists(message):
+    logging.info(f"Processing anchor exists: {message}")
+    insert_anchor_point(json.dumps(message))  # Convert the message dict to JSON string
+
+
 # Connect to RabbitMQ and consume messages
 def consume_messages():
     connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
@@ -125,6 +140,10 @@ def consume_messages():
         message = json.loads(body)
         process_system_setup(message)
 
+    def callback_anchor_exists(ch, method, properties, body):
+        message = json.loads(body)
+        process_anchor_exists(message)
+
     # Set up consumers
     channel.basic_consume(queue='anchor_beacon_distance_queue', on_message_callback=callback_anchor_beacon_distance, auto_ack=True)
     channel.basic_consume(queue='anchor_anchor_distance_queue', on_message_callback=callback_anchor_anchor_distance, auto_ack=True)
@@ -132,11 +151,21 @@ def consume_messages():
     channel.basic_consume(queue='camera_position_queue', on_message_callback=callback_camera_position, auto_ack=True)
     channel.basic_consume(queue='calculated_positions_queue', on_message_callback=callback_calculated_position, auto_ack=True)
     channel.basic_consume(queue='system_setup_queue', on_message_callback=callback_system_setup, auto_ack=True)
+    channel.basic_consume(queue='anchor_exists_queue', on_message_callback=callback_anchor_exists, auto_ack=True)
 
     logging.info(' [*] Waiting for messages. To exit press CTRL+C')
     channel.start_consuming()
 
 if __name__ == "__main__":
-    # Example: set initial mode to 'setup'
+    import threading
+
+    # Start the FastAPI app in a separate thread
+    def start_api():
+        uvicorn.run(app, host="0.0.0.0", port=8001)
+
+    api_thread = threading.Thread(target=start_api)
+    api_thread.start()
+
+    # Set initial mode and start consuming messages
     set_mode("show")
     consume_messages()

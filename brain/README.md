@@ -161,3 +161,29 @@ The system can operate in different modes based on the value of the MODE environ
 setup: Initializes the system and prepares it for calibration.
 calibration: Performs calibration to determine the positions of the anchors.
 show: Processes and logs data in real-time for monitoring and analysis.
+
+
+
+Anchor Exists Packet
+The anchor_exists packet is sent by an anchor to indicate its presence in the system. This packet contains essential information about the anchor, such as its unique identifier, firmware version, MAC address, and status.
+
+Packet Structure
+
+json
+Copy code
+{
+    "type": "anchor_exists",
+    "timestamp": "2024-06-20T23:33:54.555278Z",
+    "anchor_id": "anchor1",
+    "firmware_version": "1.0.0",
+    "mac_address": "00:1B:44:11:3A:B7",
+    "status": "active"
+}
+Field Descriptions
+
+type: The type of the message, which is anchor_exists in this case.
+timestamp: The timestamp when the packet was generated.
+anchor_id: The unique identifier for the anchor.
+firmware_version: The version of the firmware running on the anchor.
+mac_address: The MAC address of the anchor.
+status: The status of the anchor (e.g., active, inactive).

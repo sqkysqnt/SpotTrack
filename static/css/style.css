@@ -10,8 +10,6 @@ body {
     overflow: hidden;
 }
 #main-header {
-    background-color: #333;
-    color: #fff;
     padding-top: 30px;
     min-height: 70px;
     border-bottom: #77a1d3 3px solid;
@@ -35,6 +33,11 @@ body {
     color: #fff;
     text-decoration: none;
     font-size: 18px;
+}
+#current-mode {
+    text-align: center;
+    margin-top: 10px;
+    font-weight: bold;
 }
 .tab-content {
     display: none;
@@ -113,4 +116,103 @@ input[type="submit"]:hover, button:hover {
     color: black;
     text-decoration: none;
     cursor: pointer;
+}
+
+/* Mode-specific header colors */
+#main-header.setup {
+    background-color: lightblue;
+}
+#main-header.calibration {
+    background-color: #e67e22; /* dirty orange */
+}
+#main-header.show {
+    background-color: forestgreen;
+}
+
+#logs-table {
+    width: 100%;
+    border-collapse: separate; /* Use 'separate' instead of 'collapse' */
+    border-spacing: 10px; /* Add space between columns */
+}
+
+#logs-table th, #logs-table td {
+    border: 1px solid black;
+    padding: 8px;
+    text-align: left;
+}
+
+#logs-table th {
+    background-color: #f2f2f2;
+}
+
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+    padding: 10px;
+    background-color: #f4f4f9;
+}
+
+.grid-item {
+    background-color: #fff;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    cursor: move;
+    position: relative;
+}
+
+.grid-item h3 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.grid-item p {
+    margin: 5px 0;
+}
+
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+    padding: 10px;
+    background-color: #f4f4f9;
+    position: relative;
+}
+
+.grid-item {
+    background-color: #fff;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    cursor: move;
+    position: absolute;
+}
+
+.grid-item h3 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.grid-item p {
+    margin: 5px 0;
+}
+
+.dragging {
+    opacity: 0.5;
+}
+
+.drag-over {
+    border: 2px dashed #000;
+}
+
+.draggable {
+    position: absolute;
+    cursor: move;
+}
+.anchor-icon {
+    width: 50px;
+    height: 50px;
+    position: absolute;
+    cursor: grab;
 }

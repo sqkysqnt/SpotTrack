@@ -2,12 +2,15 @@
 <html>
 <head>
     <title>Stage Tracking System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
     <link rel="stylesheet" type="text/css" href="/static/css/style.css">
 </head>
 <body>
     <header id="main-header">
         <div class="container">
             <h1>Stage Tracking System Setup</h1>
+            <h2>Current Mode: <span id="mode-display">Unknown</span></h2>
             <nav>
                 <ul>
                     <li><a href="#" onclick="showTab('devices')">Devices</a></li>
@@ -20,40 +23,78 @@
     </header>
     <div class="container">
         <div id="devices" class="tab-content">
-            <h2>Connected Devices</h2>
-            <ul id="devices-list"></ul>
+            <h2>Devices</h2>
+            <div id="anchor-container" style="width: 100%; height: 600px; position: relative; border: 1px solid #ccc;"></div>
         </div>
+        
         <div id="config" class="tab-content">
-            <h2>Send Configuration</h2>
-            <form id="configForm">
+            <h2>Configuration</h2>
+            <form id="wifiForm">
+                <h3>WiFi Configuration</h3>
                 <label for="device_id">Device ID:</label>
-                <input type="text" id="device_id" name="device_id">
-
+                <select id="device_id" name="device_id">
+                    <!-- Options will be populated dynamically -->
+                </select><br>
+            
                 <label for="target_ssid">Target SSID:</label>
                 <select id="target_ssid" name="target_ssid"></select>
-                <button type="button" onclick="searchSSIDs()">Search SSIDs</button><br>
-
+                <button id="search-ssids-button" type="button" onclick="searchSSIDs()">Search SSIDs</button><br>
+            
                 <label for="target_password">Target Password:</label>
-                <input type="text" id="target_password" name="target_password">
+                <input type="text" id="target_password" name="target_password"><br>
+            
+                <input type="submit" value="Send WiFi Configuration">
+            </form>
+            
 
+            <form id="anchorForm">
+                <h3>Anchor Configuration</h3>
+                <label for="anchor_mac">Anchor MAC Address:</label>
+                <select id="anchor_mac" name="anchor_mac">
+                    <!-- Options will be populated by JavaScript -->
+                </select>
+
+                <label for="anchor_name">Anchor Name:</label>
+                <input type="text" id="anchor_name" name="anchor_name">
+
+                <label for="anchor_location">Anchor Location:</label>
+                <input type="text" id="anchor_location" name="anchor_location">
+
+                <input type="submit" value="Update Anchor">
+            </form>
+            <ul id="anchors-list"></ul>
+
+            <form id="modeForm">
+                <h3>Change Mode</h3>
                 <label for="mode">Mode:</label>
                 <select id="mode" name="mode">
                     <option value="setup">Setup</option>
                     <option value="calibration">Calibration</option>
                     <option value="show">Show</option>
                 </select>
-
-                <label for="calibration_data">Calibration Data:</label>
-                <input type="text" id="calibration_data" name="calibration_data">
-
-                <input type="submit" value="Send Configuration">
+                <input type="submit" value="Change Mode">
             </form>
-            <button type="button" onclick="openSetupModal()">Trigger Setup Mode</button>
         </div>
         <div id="logs" class="tab-content">
             <h2>Logs</h2>
-            <div id="logs-content"></div>
+            <div id="logs-content">
+                <table id="logs-table">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Level</th>
+                            <th>Message</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logs-tbody">
+                        <!-- Log entries will go here -->
+                    </tbody>
+                </table>
+            </div>
         </div>
+        
+        
+                  
         <div id="mqtt-info" class="tab-content">
             <h2>MQTT Information</h2>
             <div id="mqtt-info-content"></div>
@@ -62,15 +103,12 @@
         </div>
     </div>
 
-    <div id="setupModal" class="modal">
+    <div id="modeWarningModal" class="modal">
         <div class="modal-content">
-            <span class="close" onclick="closeSetupModal()">&times;</span>
-            <h2>Warning: Setup Mode</h2>
-            <p>All devices will disconnect during setup mode. Please select devices to revert to hardcoded settings:</p>
-            <form id="setupForm">
-                <div id="deviceCheckboxes"></div>
-                <button type="button" onclick="triggerSetupMode()">Confirm and Trigger Setup Mode</button>
-            </form>
+            <span class="close" onclick="closeModeWarningModal()">&times;</span>
+            <p id="modeWarningText"></p>
+            <button type="button" onclick="confirmModeChange()">Confirm</button>
+            <button type="button" onclick="closeModeWarningModal()">Cancel</button>
         </div>
     </div>
 
