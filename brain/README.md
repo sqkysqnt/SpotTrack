@@ -169,8 +169,7 @@ The anchor_exists packet is sent by an anchor to indicate its presence in the sy
 
 Packet Structure
 
-json
-Copy code
+
 {
     "type": "anchor_exists",
     "timestamp": "2024-06-20T23:33:54.555278Z",
