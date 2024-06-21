@@ -24,9 +24,10 @@
     <div class="container">
         <div id="devices" class="tab-content">
             <h2>Devices</h2>
-            <div id="anchor-container" style="width: 100%; height: 600px; position: relative; border: 1px solid #ccc;"></div>
+            <div id="anchor-container" style="width: 100%; height: 600px; position: relative; border: 1px solid #ccc;">
+                <!-- Anchor images will be dynamically inserted here -->
+            </div>
         </div>
-        
         <div id="config" class="tab-content">
             <h2>Configuration</h2>
             <form id="wifiForm">
@@ -45,8 +46,6 @@
             
                 <input type="submit" value="Send WiFi Configuration">
             </form>
-            
-
             <form id="anchorForm">
                 <h3>Anchor Configuration</h3>
                 <label for="anchor_mac">Anchor MAC Address:</label>
@@ -63,7 +62,6 @@
                 <input type="submit" value="Update Anchor">
             </form>
             <ul id="anchors-list"></ul>
-
             <form id="modeForm">
                 <h3>Change Mode</h3>
                 <label for="mode">Mode:</label>
@@ -92,9 +90,6 @@
                 </table>
             </div>
         </div>
-        
-        
-                  
         <div id="mqtt-info" class="tab-content">
             <h2>MQTT Information</h2>
             <div id="mqtt-info-content"></div>
@@ -102,7 +97,6 @@
             <ul id="subscriptions-list"></ul>
         </div>
     </div>
-
     <div id="modeWarningModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModeWarningModal()">&times;</span>
@@ -111,7 +105,6 @@
             <button type="button" onclick="closeModeWarningModal()">Cancel</button>
         </div>
     </div>
-
     <script src="/static/js/script.js"></script>
     <script>
         async function fetchSubscriptions() {

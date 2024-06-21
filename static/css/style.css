@@ -210,9 +210,53 @@ input[type="submit"]:hover, button:hover {
     position: absolute;
     cursor: move;
 }
+
+.anchor-icon {
+    width: 32px;
+    height: 32px;
+    position: absolute;
+    cursor: move;
+}
+
+.anchor-tooltip {
+    display: none;
+    position: absolute;
+    background-color: #333;
+    color: #fff;
+    padding: 5px;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+.anchor-icon:hover .anchor-tooltip {
+    display: block;
+}
+
+#anchor-container img {
+    position: absolute;
+}
+
 .anchor-icon {
     width: 50px;
     height: 50px;
     position: absolute;
-    cursor: grab;
+    cursor: move;
+}
+.anchor-tooltip {
+    display: none;
+    position: absolute;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    padding: 5px;
+    z-index: 1000;
+    white-space: nowrap;
+}
+.anchor-icon:hover .anchor-tooltip {
+    display: block;
+}
+.drag-over {
+    border: 2px dashed #ccc;
+}
+.dragging {
+    opacity: 0.5;
 }

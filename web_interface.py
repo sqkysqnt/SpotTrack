@@ -34,7 +34,6 @@ class AnchorUpdate(BaseModel):
     user_defined_name: str
     user_defined_location: str
 
-
 current_mode = "Unknown"
 devices = []
 
@@ -64,13 +63,8 @@ async def get_mqtt_info():
 @app.get("/search_ssids")
 async def search_ssids():
     result = subprocess.run(['sudo', 'iwlist', 'wlan0', 'scan'], capture_output=True, text=True)
-    ssids = []
-    for line in result.stdout.splitlines():
-        if "ESSID:" in line:
-            ssid = line.split(":")[1].strip().strip('"')
-            if ssid and ssid not in ssids:
-                ssids.append(ssid)
-    return {"ssids": ssids}
+    ssids = [line.split(":")[1].strip().strip('"') for line in result.stdout.splitlines() if "ESSID:" in line]
+    return {"ssids": list(set(ssids))}
 
 @app.post("/send_config")
 async def send_config(config: DeviceConfig):
@@ -82,11 +76,9 @@ async def send_config(config: DeviceConfig):
             "ssid": config.ssid,
             "password": config.password
         }
-        if config.device_id == 'all':
-            for device_id in ["device_1", "device_2", "device_3"]:
-                mqtt_client.publish(f"stage_tracking/config/{device_id}", json.dumps(config_message))
-        else:
-            mqtt_client.publish(f"stage_tracking/config/{config.device_id}", json.dumps(config_message))
+        device_ids = ["device_1", "device_2", "device_3"] if config.device_id == 'all' else [config.device_id]
+        for device_id in device_ids:
+            mqtt_client.publish(f"stage_tracking/config/{device_id}", json.dumps(config_message))
         return {"status": "success"}
     except Exception as e:
         logger.error(f"Failed to send configuration: {e}")
@@ -130,20 +122,47 @@ async def websocket_endpoint(websocket: WebSocket):
 @app.get("/anchor_points")
 async def anchor_points_endpoint():
     anchor_points = get_anchor_points()
-    return {"anchor_points": anchor_points}
+    formatted_anchor_points = [
+        {
+            "id": anchor[0],
+            "webpage_x": anchor[1],
+            "webpage_y": anchor[2],
+            "x_coordinate": anchor[3],
+            "y_coordinate": anchor[4],
+            "z_coordinate": anchor[5],
+            "status": anchor[6],
+            "last_updated": anchor[7],
+            "firmware_version": anchor[8],
+            "user_defined_name": anchor[9],
+            "user_defined_location": anchor[10],
+            "mac_address": anchor[11],
+            "ip_address": anchor[12]
+        }
+        for anchor in anchor_points
+    ]
+    return {"anchor_points": formatted_anchor_points}
+
+
+
+
 
 @app.post("/update_anchor_position")
-async def update_anchor_position(position_update: dict):
-    conn = sqlite3.connect('logs.db')
-    c = conn.cursor()
-    c.execute('''
-        UPDATE anchor_points 
-        SET webpage_x = ?, webpage_y = ? 
-        WHERE id = ?
-    ''', (position_update['webpage_x'], position_update['webpage_y'], position_update['id']))
-    conn.commit()
-    conn.close()
-    return {"status": "success"}
+async def update_anchor_position(position_update: UpdateAnchorPosition):
+    try:
+        conn = sqlite3.connect('logs.db')
+        c = conn.cursor()
+        c.execute('''
+            UPDATE anchor_points 
+            SET webpage_x = ?, webpage_y = ? 
+            WHERE id = ?
+        ''', (position_update.webpage_x, position_update.webpage_y, position_update.id))
+        conn.commit()
+        conn.close()
+        return {"status": "success"}
+    except Exception as e:
+        logger.error(f"Failed to update anchor position: {e}")
+        return {"status": "failure", "error": str(e)}
+
 
 @app.post("/update_anchor")
 async def update_anchor(anchor_update: AnchorUpdate):
@@ -170,7 +189,6 @@ async def get_device_ids():
     ]
     return {"device_ids": formatted_device_ids}
 
-
 @app.get("/anchor_macs")
 async def get_anchor_macs():
     conn = sqlite3.connect('logs.db')
@@ -183,7 +201,6 @@ async def get_anchor_macs():
     ]
     return {"anchor_macs": formatted_anchor_macs}
 
-
 @app.get("/get_anchor_details/{mac_address}")
 async def get_anchor_details(mac_address: str):
     conn = sqlite3.connect('logs.db')
@@ -195,6 +212,7 @@ async def get_anchor_details(mac_address: str):
         return {"user_defined_name": anchor[0], "user_defined_location": anchor[1]}
     else:
         raise HTTPException(status_code=404, detail="Anchor not found")
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -39,11 +39,11 @@ ws.onmessage = function(event) {
     }
 };
 
-
 document.getElementById('wifiForm').onsubmit = function(event) {
     event.preventDefault();
     const formData = new FormData(event.target);
     const configData = {
+        device_id: formData.get('device_id'),
         ssid: formData.get('target_ssid'),
         password: formData.get('target_password')
     };
@@ -53,20 +53,38 @@ document.getElementById('wifiForm').onsubmit = function(event) {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify(configData),
-    }).then(response => response.json())
-      .then(data => addLog(`WiFi configuration sent: ${JSON.stringify(configData)}`));
+    }).then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => addLog(`WiFi configuration sent: ${JSON.stringify(configData)}`))
+    .catch(error => addLog(`Failed to send configuration: ${error}`));
 };
 
 document.getElementById('anchorForm').onsubmit = function(event) {
     event.preventDefault();
     const formData = new FormData(event.target);
-    const anchorMac = formData.get('anchor_mac');
-    const anchorName = formData.get('anchor_name');
-    if (anchorMac && anchorName) {
-        anchors[anchorMac] = { name: anchorName };
-        updateAnchorsList();
-        addLog(`Anchor name updated: MAC ${anchorMac}, Name ${anchorName}`);
-    }
+    const anchorUpdate = {
+        mac_address: formData.get('anchor_mac').split(' - ')[0], // Extract only the MAC address
+        user_defined_name: formData.get('anchor_name'),
+        user_defined_location: formData.get('anchor_location')
+    };
+    fetch('/update_anchor', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(anchorUpdate),
+    }).then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => addLog(`Anchor updated: ${JSON.stringify(anchorUpdate)}`))
+    .catch(error => addLog(`Failed to update anchor: ${error}`));
 };
 
 document.getElementById('modeForm').onsubmit = function(event) {
@@ -102,7 +120,6 @@ function searchSSIDs() {
 }
 
 document.getElementById('search-ssids-button').addEventListener('click', searchSSIDs);
-
 
 function openSetupModal() {
     setupModal.style.display = 'block';
@@ -208,11 +225,17 @@ function updateModeDisplay(mode) {
 function updateAnchorsList() {
     const anchorsList = document.getElementById('anchors-list');
     anchorsList.innerHTML = '';
-    for (const [anchor_mac, anchor_info] of Object.entries(anchors)) {
-        const li = document.createElement('li');
-        li.textContent = `MAC: ${anchor_mac}, Name: ${anchor_info.name || 'Unnamed'}`;
-        anchorsList.appendChild(li);
-    }
+    fetch("/anchor_points")
+        .then(response => response.json())
+        .then(data => {
+            data.anchor_points.forEach(anchor => {
+                const li = document.createElement('li');
+                li.textContent = `MAC: ${anchor.mac_address}, Name: ${anchor.user_defined_name || 'Unnamed'}, Location: ${anchor.user_defined_location || 'Unspecified'}`;
+                anchorsList.appendChild(li);
+            });
+        }).catch(error => {
+            addLog(`Failed to fetch anchor points: ${error}`);
+        });
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -232,7 +255,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             data.device_ids.forEach(device => {
                 const option = document.createElement('option');
-                option.value = device.split(' - ')[0];  // Use MAC address as value
+                option.value = device;
                 option.textContent = device;
                 deviceIdSelect.appendChild(option);
             });
@@ -252,10 +275,10 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             const anchorMacSelect = document.getElementById('anchor_mac');
-            data.anchor_macs.forEach(anchor => {
+            data.anchor_macs.forEach(mac => {
                 const option = document.createElement('option');
-                option.value = anchor.split(' - ')[0];  // Use MAC address as value
-                option.textContent = anchor;
+                option.value = mac;
+                option.textContent = mac;
                 anchorMacSelect.appendChild(option);
             });
         }).catch(error => {
@@ -301,9 +324,8 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => addLog(`Failed to send configuration: ${error}`));
     };
 
-    // Event listener for anchor MAC selection
     document.getElementById('anchor_mac').addEventListener('change', function() {
-        const selectedMac = this.value;
+        const selectedMac = this.value.split(' - ')[0]; // Extract only the MAC address
         if (selectedMac !== "") {
             fetch(`/get_anchor_details/${selectedMac}`)
                 .then(response => response.json())
@@ -323,7 +345,7 @@ document.addEventListener('DOMContentLoaded', function() {
         event.preventDefault();
         const formData = new FormData(event.target);
         const anchorUpdate = {
-            mac_address: formData.get('anchor_mac'),
+            mac_address: formData.get('anchor_mac').split(' - ')[0], // Extract only the MAC address
             user_defined_name: formData.get('anchor_name'),
             user_defined_location: formData.get('anchor_location')
         };
@@ -342,47 +364,9 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => addLog(`Anchor updated: ${JSON.stringify(anchorUpdate)}`))
         .catch(error => addLog(`Failed to update anchor: ${error}`));
     };
+
+    setInterval(fetchAnchorPoints, 5000); // Refresh every 5 seconds
 });
-
-
-function fetchDeviceIds() {
-    fetch('/device_ids')
-        .then(response => response.json())
-        .then(data => {
-            const deviceIdSelect = document.getElementById('device_id');
-            deviceIdSelect.innerHTML = '';  // Clear existing options
-            const allOption = document.createElement('option');
-            allOption.value = 'all';
-            allOption.textContent = 'All';
-            deviceIdSelect.appendChild(allOption);
-
-            data.device_ids.forEach(device => {
-                const option = document.createElement('option');
-                option.value = device.mac_address;
-                option.textContent = `${device.mac_address}, ${device.user_defined_name || ''}, ${device.user_defined_location || ''}`;
-                deviceIdSelect.appendChild(option);
-            });
-        }).catch(error => {
-            addLog(`Failed to fetch device IDs: ${error}`);
-        });
-}
-
-function fetchAnchorMacs() {
-    fetch('/anchor_macs')
-        .then(response => response.json())
-        .then(data => {
-            const anchorMacSelect = document.getElementById('anchor_mac');
-            anchorMacSelect.innerHTML = ''; // Clear existing options
-            data.anchor_macs.forEach(anchor => {
-                const option = document.createElement('option');
-                option.value = anchor.mac_address;
-                option.textContent = `${anchor.mac_address}, ${anchor.user_defined_name || ''}, ${anchor.user_defined_location || ''}`;
-                anchorMacSelect.appendChild(option);
-            });
-        }).catch(error => {
-            addLog(`Failed to fetch anchor MACs: ${error}`);
-        });
-}
 
 function fetchLogs() {
     fetch('/logs')
@@ -407,29 +391,74 @@ function fetchLogs() {
 }
 
 function fetchAnchorPoints() {
+    console.log("Fetching anchor points...");
     fetch("/anchor_points")
         .then(response => response.json())
         .then(data => {
-            const deviceList = document.getElementById("device-list");
-            deviceList.innerHTML = "";  // Clear the list first
+            const anchorContainer = document.getElementById("anchor-container");
+            const anchorsList = document.getElementById("anchors-list");
+            anchorContainer.innerHTML = "";  // Clear the container first
+            anchorsList.innerHTML = ""; // Clear the list first
             data.anchor_points.forEach(anchor => {
-                const li = document.createElement("li");
-                li.textContent = `ID: ${anchor.id}, X: ${anchor.x_coordinate}, Y: ${anchor.y_coordinate}, Z: ${anchor.z_coordinate}, Status: ${anchor.status}, Last Updated: ${anchor.last_updated}, Firmware: ${anchor.firmware_version}, Name: ${anchor.user_defined_name}, Location: ${anchor.user_defined_location}, MAC: ${anchor.mac_address}, IP: ${anchor.ip_address}`;
-                deviceList.appendChild(li);
+                console.log("Anchor:", anchor);
+                const img = document.createElement("img");
+                img.src = "/static/images/anchor_ico.png";
+                img.classList.add("anchor-icon");
+                img.style.left = `${anchor.webpage_x}px`;
+                img.style.top = `${anchor.webpage_y}px`;
+                img.style.position = 'absolute';
+                img.setAttribute("draggable", true);
+                img.id = anchor.id;
+
+                // Tooltip for anchor info
+                const tooltip = document.createElement("div");
+                tooltip.classList.add("anchor-tooltip");
+                tooltip.innerHTML = `
+                    ID: ${anchor.id}<br>
+                    X: ${anchor.x_coordinate}<br>
+                    Y: ${anchor.y_coordinate}<br>
+                    Z: ${anchor.z_coordinate}<br>
+                    Status: ${anchor.status}<br>
+                    Last Updated: ${anchor.last_updated}<br>
+                    Firmware: ${anchor.firmware_version}<br>
+                    Name: ${anchor.user_defined_name}<br>
+                    Location: ${anchor.user_defined_location}<br>
+                    MAC: ${anchor.mac_address}<br>
+                    IP: ${anchor.ip_address}
+                `;
+
+                img.appendChild(tooltip);
+                img.addEventListener("dragstart", handleDragStart);
+                img.addEventListener("dragend", handleDragEnd);
+                anchorContainer.appendChild(img);
+
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <strong>ID:</strong> ${anchor.id}<br>
+                    <strong>Webpage X:</strong> ${anchor.webpage_x}<br>
+                    <strong>Webpage Y:</strong> ${anchor.webpage_y}<br>
+                    <strong>X Coordinate:</strong> ${anchor.x_coordinate}<br>
+                    <strong>Y Coordinate:</strong> ${anchor.y_coordinate}<br>
+                    <strong>Z Coordinate:</strong> ${anchor.z_coordinate}<br>
+                    <strong>Status:</strong> ${anchor.status}<br>
+                    <strong>Last Updated:</strong> ${anchor.last_updated}<br>
+                    <strong>Firmware Version:</strong> ${anchor.firmware_version}<br>
+                    <strong>Name:</strong> ${anchor.user_defined_name || 'Unnamed'}<br>
+                    <strong>Location:</strong> ${anchor.user_defined_location || 'Unspecified'}<br>
+                    <strong>MAC:</strong> ${anchor.mac_address}<br>
+                    <strong>IP:</strong> ${anchor.ip_address}
+                `;
+                anchorsList.appendChild(li);
             });
 
-            const anchorMacSelect = document.getElementById('anchor_mac');
-            anchorMacSelect.innerHTML = ''; // Clear existing options
-            data.anchor_points.forEach(anchor => {
-                const option = document.createElement('option');
-                option.value = anchor.mac_address;
-                option.textContent = `${anchor.mac_address}, ${anchor.user_defined_name || ''}, ${anchor.user_defined_location || ''}`;
-                anchorMacSelect.appendChild(option);
-            });
+            anchorContainer.addEventListener("dragover", handleDragOver);
+            anchorContainer.addEventListener("drop", handleDrop);
         }).catch(error => {
             addLog(`Failed to fetch anchor points: ${error}`);
         });
 }
+
+
 
 function handleDragStart(event) {
     event.dataTransfer.setData('text/plain', event.target.id);
@@ -447,8 +476,28 @@ function handleDrop(event) {
     const draggable = document.getElementById(id);
     event.target.classList.remove('drag-over');
     draggable.style.position = 'absolute';
-    draggable.style.left = `${event.clientX}px`;
-    draggable.style.top = `${event.clientY}px`;
+    draggable.style.left = `${event.clientX - event.target.offsetLeft}px`;
+    draggable.style.top = `${event.clientY - event.target.offsetTop}px`;
+
+    // Save the new position to the database
+    fetch('/update_anchor_position', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            id: id,
+            webpage_x: event.clientX - event.target.offsetLeft,
+            webpage_y: event.clientY - event.target.offsetTop
+        }),
+    }).then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => addLog(`Anchor position updated: ${JSON.stringify(data)}`))
+    .catch(error => addLog(`Failed to update anchor position: ${error}`));
 }
 
 function handleDragEnd(event) {
