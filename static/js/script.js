@@ -232,8 +232,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
             data.device_ids.forEach(device => {
                 const option = document.createElement('option');
-                option.value = device.mac_address;
-                option.textContent = `${device.mac_address}, ${device.user_defined_name || ''}, ${device.user_defined_location || ''}`;
+                option.value = device.split(' - ')[0];  // Use MAC address as value
+                option.textContent = device;
                 deviceIdSelect.appendChild(option);
             });
         }).catch(error => {
@@ -252,10 +252,10 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             const anchorMacSelect = document.getElementById('anchor_mac');
-            data.anchor_macs.forEach(mac => {
+            data.anchor_macs.forEach(anchor => {
                 const option = document.createElement('option');
-                option.value = mac;
-                option.textContent = mac;
+                option.value = anchor.split(' - ')[0];  // Use MAC address as value
+                option.textContent = anchor;
                 anchorMacSelect.appendChild(option);
             });
         }).catch(error => {
@@ -343,6 +343,46 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => addLog(`Failed to update anchor: ${error}`));
     };
 });
+
+
+function fetchDeviceIds() {
+    fetch('/device_ids')
+        .then(response => response.json())
+        .then(data => {
+            const deviceIdSelect = document.getElementById('device_id');
+            deviceIdSelect.innerHTML = '';  // Clear existing options
+            const allOption = document.createElement('option');
+            allOption.value = 'all';
+            allOption.textContent = 'All';
+            deviceIdSelect.appendChild(allOption);
+
+            data.device_ids.forEach(device => {
+                const option = document.createElement('option');
+                option.value = device.mac_address;
+                option.textContent = `${device.mac_address}, ${device.user_defined_name || ''}, ${device.user_defined_location || ''}`;
+                deviceIdSelect.appendChild(option);
+            });
+        }).catch(error => {
+            addLog(`Failed to fetch device IDs: ${error}`);
+        });
+}
+
+function fetchAnchorMacs() {
+    fetch('/anchor_macs')
+        .then(response => response.json())
+        .then(data => {
+            const anchorMacSelect = document.getElementById('anchor_mac');
+            anchorMacSelect.innerHTML = ''; // Clear existing options
+            data.anchor_macs.forEach(anchor => {
+                const option = document.createElement('option');
+                option.value = anchor.mac_address;
+                option.textContent = `${anchor.mac_address}, ${anchor.user_defined_name || ''}, ${anchor.user_defined_location || ''}`;
+                anchorMacSelect.appendChild(option);
+            });
+        }).catch(error => {
+            addLog(`Failed to fetch anchor MACs: ${error}`);
+        });
+}
 
 function fetchLogs() {
     fetch('/logs')

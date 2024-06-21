@@ -162,21 +162,27 @@ async def update_anchor(anchor_update: AnchorUpdate):
 async def get_device_ids():
     conn = sqlite3.connect('logs.db')
     cursor = conn.cursor()
-    cursor.execute("SELECT mac_address, user_defined_name, user_defined_location FROM anchor_points")
+    cursor.execute("SELECT mac_address, ip_address, user_defined_name, user_defined_location FROM anchor_points")
     device_ids = cursor.fetchall()
     conn.close()
-    formatted_device_ids = [{"mac_address": row[0], "user_defined_name": row[1], "user_defined_location": row[2]} for row in device_ids]
+    formatted_device_ids = [
+        f"{row[0]} - {row[1]} - {row[2] or ''} - {row[3] or ''}" for row in device_ids
+    ]
     return {"device_ids": formatted_device_ids}
+
 
 @app.get("/anchor_macs")
 async def get_anchor_macs():
     conn = sqlite3.connect('logs.db')
     cursor = conn.cursor()
-    cursor.execute("SELECT mac_address, user_defined_name, user_defined_location FROM anchor_points")
+    cursor.execute("SELECT mac_address, ip_address, user_defined_name, user_defined_location FROM anchor_points")
     anchor_macs = cursor.fetchall()
     conn.close()
-    formatted_anchor_macs = [{"mac_address": row[0], "user_defined_name": row[1], "user_defined_location": row[2]} for row in anchor_macs]
+    formatted_anchor_macs = [
+        f"{row[0]} - {row[1]} - {row[2] or ''} - {row[3] or ''}" for row in anchor_macs
+    ]
     return {"anchor_macs": formatted_anchor_macs}
+
 
 @app.get("/get_anchor_details/{mac_address}")
 async def get_anchor_details(mac_address: str):
