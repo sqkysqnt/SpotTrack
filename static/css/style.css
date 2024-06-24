@@ -242,21 +242,65 @@ input[type="submit"]:hover, button:hover {
     position: absolute;
     cursor: move;
 }
-.anchor-tooltip {
-    display: none;
-    position: absolute;
-    background-color: #fff;
-    border: 1px solid #ccc;
-    padding: 5px;
-    z-index: 1000;
-    white-space: nowrap;
-}
-.anchor-icon:hover .anchor-tooltip {
-    display: block;
-}
+
 .drag-over {
     border: 2px dashed #ccc;
 }
 .dragging {
     opacity: 0.5;
+}
+
+.anchor-text {
+    font-size: 12px;
+    color: #000;
+    background-color: rgba(255, 255, 255, 0.8);
+    padding: 2px 4px;
+    border-radius: 3px;
+    pointer-events: none;
+}
+
+.anchor-tooltip {
+    position: absolute;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    padding: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    display: none;
+    z-index: 1000;
+}
+
+.anchor-icon:hover .anchor-tooltip {
+    display: block;
+}
+
+.anchor-container {
+    position: relative;
+}
+
+.anchor-text {
+    font-size: 12px;
+    color: #000;
+    background-color: rgba(255, 255, 255, 0.8);
+    padding: 2px 4px;
+    border-radius: 3px;
+    pointer-events: none;
+    margin-top: 5px; /* Add some space between the image and the text */
+    text-align: center;
+}
+
+.anchor-tooltip {
+    position: absolute;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    padding: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    display: none;
+    z-index: 1000;
+    top: 100%; /* Position below the image */
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.anchor-container:hover .anchor-tooltip {
+    display: block;
 }

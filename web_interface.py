@@ -121,26 +121,32 @@ async def websocket_endpoint(websocket: WebSocket):
 
 @app.get("/anchor_points")
 async def anchor_points_endpoint():
-    anchor_points = get_anchor_points()
-    formatted_anchor_points = [
-        {
-            "id": anchor[0],
-            "webpage_x": anchor[1],
-            "webpage_y": anchor[2],
-            "x_coordinate": anchor[3],
-            "y_coordinate": anchor[4],
-            "z_coordinate": anchor[5],
-            "status": anchor[6],
-            "last_updated": anchor[7],
-            "firmware_version": anchor[8],
-            "user_defined_name": anchor[9],
-            "user_defined_location": anchor[10],
-            "mac_address": anchor[11],
-            "ip_address": anchor[12]
-        }
-        for anchor in anchor_points
-    ]
-    return {"anchor_points": formatted_anchor_points}
+    conn = sqlite3.connect('logs.db')
+    c = conn.cursor()
+    c.execute("SELECT id, mac_address, ip_address, user_defined_name, user_defined_location, x_coordinate, y_coordinate, z_coordinate, status, last_updated, firmware_version, webpage_x, webpage_y FROM anchor_points")
+    anchor_points = c.fetchall()
+    conn.close()
+
+    return {
+        "anchor_points": [
+            {
+                "id": anchor[0],
+                "mac_address": anchor[1],
+                "ip_address": anchor[2],
+                "user_defined_name": anchor[3],
+                "user_defined_location": anchor[4],
+                "x_coordinate": anchor[5],
+                "y_coordinate": anchor[6],
+                "z_coordinate": anchor[7],
+                "status": anchor[8],
+                "last_updated": anchor[9],
+                "firmware_version": anchor[10],
+                "webpage_x": anchor[11],
+                "webpage_y": anchor[12]
+            }
+        for anchor in anchor_points]
+    }
+
 
 
 
@@ -162,6 +168,7 @@ async def update_anchor_position(position_update: UpdateAnchorPosition):
     except Exception as e:
         logger.error(f"Failed to update anchor position: {e}")
         return {"status": "failure", "error": str(e)}
+
 
 
 @app.post("/update_anchor")

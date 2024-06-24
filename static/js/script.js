@@ -401,14 +401,22 @@ function fetchAnchorPoints() {
             anchorsList.innerHTML = ""; // Clear the list first
             data.anchor_points.forEach(anchor => {
                 console.log("Anchor:", anchor);
+                const anchorDiv = document.createElement("div");
+                anchorDiv.style.position = 'absolute';
+                anchorDiv.style.left = `${anchor.webpage_x}px`;
+                anchorDiv.style.top = `${anchor.webpage_y}px`;
+                anchorDiv.classList.add('anchor-container');
+
                 const img = document.createElement("img");
                 img.src = "/static/images/anchor_ico.png";
                 img.classList.add("anchor-icon");
-                img.style.left = `${anchor.webpage_x}px`;
-                img.style.top = `${anchor.webpage_y}px`;
-                img.style.position = 'absolute';
                 img.setAttribute("draggable", true);
-                img.id = anchor.id;
+                img.id = `anchor-${anchor.id}`;
+
+                // Create a text element for the user-defined name or MAC address
+                const text = document.createElement("div");
+                text.classList.add("anchor-text");
+                text.innerText = anchor.user_defined_name || anchor.mac_address;
 
                 // Tooltip for anchor info
                 const tooltip = document.createElement("div");
@@ -427,10 +435,12 @@ function fetchAnchorPoints() {
                     IP: ${anchor.ip_address}
                 `;
 
-                img.appendChild(tooltip);
+                anchorDiv.appendChild(img);
+                anchorDiv.appendChild(text);
+                anchorDiv.appendChild(tooltip);
                 img.addEventListener("dragstart", handleDragStart);
                 img.addEventListener("dragend", handleDragEnd);
-                anchorContainer.appendChild(img);
+                anchorContainer.appendChild(anchorDiv);
 
                 const li = document.createElement('li');
                 li.innerHTML = `
@@ -458,8 +468,6 @@ function fetchAnchorPoints() {
         });
 }
 
-
-
 function handleDragStart(event) {
     event.dataTransfer.setData('text/plain', event.target.id);
     event.target.classList.add('dragging');
@@ -475,20 +483,25 @@ function handleDrop(event) {
     const id = event.dataTransfer.getData('text/plain');
     const draggable = document.getElementById(id);
     event.target.classList.remove('drag-over');
-    draggable.style.position = 'absolute';
-    draggable.style.left = `${event.clientX - event.target.offsetLeft}px`;
-    draggable.style.top = `${event.clientY - event.target.offsetTop}px`;
+    const x = event.clientX - event.target.offsetLeft;
+    const y = event.clientY - event.target.offsetTop;
+    draggable.style.left = `${x}px`;
+    draggable.style.top = `${y}px`;
+
+    console.log(`Dragging ID: ${id}`);
+    console.log(`New Position - X: ${x}, Y: ${y}`);
 
     // Save the new position to the database
+    const anchorId = id.replace('anchor-', '');
     fetch('/update_anchor_position', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            id: id,
-            webpage_x: event.clientX - event.target.offsetLeft,
-            webpage_y: event.clientY - event.target.offsetTop
+            id: anchorId,
+            webpage_x: x,
+            webpage_y: y
         }),
     }).then(response => {
         if (!response.ok) {
@@ -496,13 +509,27 @@ function handleDrop(event) {
         }
         return response.json();
     })
-    .then(data => addLog(`Anchor position updated: ${JSON.stringify(data)}`))
+    .then(data => {
+        console.log(`Update response: ${JSON.stringify(data)}`);
+        addLog(`Anchor position updated: ${JSON.stringify(data)}`);
+    })
     .catch(error => addLog(`Failed to update anchor position: ${error}`));
 }
 
 function handleDragEnd(event) {
     event.target.classList.remove('dragging');
 }
+
+function showTooltip(event) {
+    const tooltip = event.currentTarget.querySelector('.anchor-tooltip');
+    tooltip.style.display = 'block';
+}
+
+function hideTooltip(event) {
+    const tooltip = event.currentTarget.querySelector('.anchor-tooltip');
+    tooltip.style.display = 'none';
+}
+
 
 function parseLog(log) {
     const [timestampPart, levelPart, ...messageParts] = log.split(' ');
